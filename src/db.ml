@@ -1,6 +1,4 @@
-(* open Lwt.Infix *)
 open Caqti_request.Infix
-
         
 let pool =
   match
@@ -9,23 +7,9 @@ let pool =
   | Ok pool -> pool
   | Error err -> failwith (Caqti_error.show err)
 
-(* module Database = struct *)
-(*   let connect () = *)
-(*     let open Lwt.Infix in *)
-(*     Uri.of_string Config.connection_url *)
-(*     |> Caqti_lwt.connect *)
-(*     >>= Caqti_lwt.or_fail *)
-(*     |> Lwt_main.run *)
-(* end *)
-
-(* type error = Database_error of string *)
-
-(* let print_error e : error -> unit = raise (Database_error "Oh no!") *)
-
 let or_error m =
   match%lwt m with
   | Ok a -> Ok a |> Lwt.return
-  (* | Error e -> Error (Database_error (Caqti_error.show e)) |> Lwt.return *)
   | Error e -> Error (Caqti_error.show e) |> Lwt.return
 
 let migrate_query =
@@ -38,12 +22,6 @@ let migrate_query =
 
 let destroy_query = (Caqti_type.unit ->. Caqti_type.unit) {| DROP TABLE cards |}
 
-(* let get_all_query2 = *)
-(*   Caqti_request.collect *)
-(*     Caqti_type.unit *)
-(*     Caqti_type.(tup2 int string) *)
-(*     "SELECT id, content FROM todos" *)
-
 let get_all_query =
   (Caqti_type.unit ->* Caqti_type.(tup2 int string))
     "SELECT id, name FROM cards"
@@ -55,21 +33,12 @@ let get_all () =
       (fun (id, name) acc -> { id ; name } :: acc)
       () [] in
   Caqti_lwt.Pool.use get_all' pool |> or_error
-(* let get_all f = *)
-(*   let get_all' (module C : Caqti_lwt.CONNECTION) = C.iter_s get_all_query f in *)
-(*   Caqti_lwt.Pool.use get_all' pool |> or_error *)
 
-(* let get_all' f (module C : Caqti_lwt.CONNECTION) = C.fold_s get_all_query f *)
-(* let get_all f = Caqti_lwt.Pool.use (get_all' f) pool |> or_error *)
-(* Caqti_lwt.Pool.use (get_all_ name) pool |> or_error *)
+let plus_query = (Caqti_type.(tup2 int int) ->! Caqti_type.int) "SELECT ? + ?"
 
-(* let get_all (module Db : Caqti_lwt.CONNECTION) f = Db.iter_s get_all_query f () *)
-(* let get_all () = Db.iter Caqti_lwt.Pool.use get_all' pool |> or_error *)
-
-(* let get_all () = *)
-(*   let get_all' (module C : Caqti_lwt.CONNECTION) f = *)
-
-(* Caqti_lwt.Pool.use get_all' pool |> or_error *)
+let health (a,b) = 
+  let plus' (module C: Caqti_lwt.CONNECTION) = C.find plus_query (a, b) in
+  Caqti_lwt.Pool.use plus' pool |> or_error
 
 let add_query =
   (Caqti_type.string ->. Caqti_type.unit) "INSERT INTO cards (name) VALUES (?)"
@@ -86,6 +55,5 @@ let destroy () =
   let destroy' (module C : Caqti_lwt.CONNECTION) = C.exec destroy_query () in
   Caqti_lwt.Pool.use destroy' pool |> or_error
 
-let plus = (Caqti_type.(tup2 int int) ->! Caqti_type.int) "SELECT ? + ?"
 
 (* let createTables = Db. *)

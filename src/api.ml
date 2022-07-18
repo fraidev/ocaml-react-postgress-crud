@@ -2,36 +2,28 @@
 (*   let blocks = `List (List.map block_to_json (Blockchain.current ())) in *)
 (*   blocks |> Yojson.Safe.to_string |> Dream.json *)
 
-let add_endpoint name =
-  let result = Db.add name |> Lwt_main.run in
-  match result with
-  | Ok _ -> Dream.empty `OK
-  | Error _ -> Dream.empty `Not_Found
+(* let add_endpoint _res = *)
+(*   let result = Db.add name |> Lwt_main.run in *)
+(*   match result with *)
+(*   | Ok _ -> Dream.empty `OK *)
+(*   | Error _ -> Dream.empty `Not_Found *)
 
-let get_all_endpoint =
-  let result = Db.get_all () |> Lwt_main.run in
+let get_all_endpoint _request =
+  let%lwt result = Db.get_all () in
   match result with
   | Ok list ->
-      (* Card.Card.t.Caqti_pool_sig *)
-      (* Dream.empty `OK *)
-      (* let open Card.Card in *)
-      let first = List.nth list 0 in
-      let json = Card.to_json first in
-      let sJson = Yojson.Safe.to_string json in
-      Dream.json sJson
-      (* Yojson.Safe.to_string list |> Dream.respond *)
+      let cards_to_json =  List.map Card.to_json in
+      let cards_json = `List(cards_to_json list) in
+      let cards_string = Yojson.Safe.to_string cards_json in
+      Dream.json cards_string
   | Error _ -> Dream.empty `Not_Found
 
-let health_endpoint = "Service is  up and running." |> Dream.respond
-(* let health_endpoint = *)
-(*   let result = Db.pool.find Db.plus (7, 13) in *)
-(*   match result with *)
-(*   | Ok 1 -> "Service is up and running." |> Dream.respond *)
-(*   | _ -> "Service is not up and running." |> Dream.respond *)
-
-(* module Connection = (val Db.Database.connect ()) *)
-
-(* let migrate = Db.migrate () *)
+let health_endpoint (_res) =
+  let%lwt result = Db.health (7,13) in
+  match result with
+  (* 7 + 13 = 20. So the Database is working well *)
+  | Ok 20 -> "Service is up and running." |> Dream.respond
+  | _ -> "Service is not up and running." |> Dream.respond
 
 let start () =
   Dream.run ~port:Config.api_base_port
@@ -39,7 +31,7 @@ let start () =
   @@ Middlewares.cors_middleware
   @@ Dream.router
        [
-         Dream.get "/all" (fun _ -> get_all_endpoint);
-         Dream.post "/add" (fun _ -> "Vai" |> add_endpoint);
-         Dream.get "/health" (fun _ -> health_endpoint);
+         Dream.get "/all" get_all_endpoint;
+         (* Dream.post "/add" add_endpoint; *)
+         Dream.get "/health" health_endpoint
        ]
