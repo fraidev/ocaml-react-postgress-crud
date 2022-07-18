@@ -1,0 +1,5 @@
+(library
+ (name crud)
+ (libraries dream yojson caqti caqti-driver-postgresql)
+ (preprocess
+  (pps lwt_ppx ppx_yojson_conv)))

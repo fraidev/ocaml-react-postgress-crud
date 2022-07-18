@@ -1,0 +1,7 @@
+(executable
+ (public_name server)
+ (package crud)
+ (name server)
+ (libraries crud)
+ (preprocess
+  (pps lwt_ppx ppx_yojson_conv)))
